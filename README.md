@@ -12,5 +12,18 @@ pip install scmiac
 
 ## Usage
 
+### scMIAC for diagonal integration
+
+- Step 1: Pre-process scRNA-seq and scATAC-seq
+- Step 2: Run
+
+
+### scMIAC for vertical integration
+
+
+
+### scMIAC for horizontal integration
+
+
 
 ## Contact
