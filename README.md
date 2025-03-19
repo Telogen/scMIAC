@@ -9,6 +9,12 @@ Single-Cell Multi-modality Integration via cell type filtered Anchors using Cont
 
 ## Installation
 
+- Create a conda environment
+```
+conda create -n scMIAC python=3.8
+conda activate scMIAC
+```
+
 - [Install PyTorch according to your CUDA version](https://pytorch.org/get-started/previous-versions/)
 
 ```
