@@ -4,17 +4,25 @@ Single-Cell Multi-modality Integration via cell type filtered Anchors using Cont
 
 <img src="https://github.com/Telogen/scMIAC/blob/main/figures/Fig1.png" width="800">
 
+
+
+
 ## Installation
 
+- [Install PyTorch according to your CUDA version](https://pytorch.org/get-started/previous-versions/)
+
 ```
-# Install PyTorch according to your CUDA version
+# example:
 pip install torch==1.10.0+cu111 torchvision==0.11.0+cu111 torchaudio==0.10.0 -f https://download.pytorch.org/whl/torch_stable.html
-# install scMIAC
+```
+
+- Install scMIAC
+
+```
 wget https://github.com/Telogen/scMIAC/archive/refs/heads/main.zip
 pip install main.zip
-
-pip install scmiac
 ```
+
 
 ## Usage
 
