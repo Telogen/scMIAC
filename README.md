@@ -34,11 +34,11 @@ pip install main.zip
 
 ### scMIAC for diagonal integration
 
-https://github.com/Telogen/scMIAC/blob/main/tutorial/demo.ipynb
+https://github.com/Telogen/scMIAC/blob/main/tutorial/demo_diagonal.ipynb
 
 ### scMIAC for vertical integration
 
-todo
+https://github.com/Telogen/scMIAC/blob/main/tutorial/demo_vertical.ipynb
 
 ### scMIAC for horizontal integration
 
