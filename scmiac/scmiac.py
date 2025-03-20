@@ -1,14 +1,14 @@
 import numpy as np
-from .integration_anchors import SeuratIntegration, get_integration_features
-
+import pandas as pd
 import torch
-from sklearn.preprocessing import LabelEncoder
+import torch.optim as optim
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, WeightedRandomSampler
+
+from .integration_anchors import SeuratIntegration, get_integration_features
 from .integration_dataset import MultiOmicDataset, AnchorCellsDataset
 from .integration_model import VAE
 from .integration_loss import NTXentLoss2, VAELoss
-import torch.optim as optim
-import torch.nn.functional as F
 
 
 
@@ -21,7 +21,8 @@ def find_anchors(
     single_nfeatures=2000,
     k_anchor=5,
     n_components=30,
-    ct_filter=True
+    ct_filter=True,
+    mode=None
 ):
     """
     Find anchors between RNA and ATAC data for integration.
@@ -34,62 +35,78 @@ def find_anchors(
     - k_anchor: Number of neighbors to use when picking anchors (default: 5).
     - n_components: Number of components for dimensionality reduction (default: 30).
     - ct_filter: Whether to filter anchors by cell type (default: True).
+    - mode: Mode of operation. If 'v', generate a simple anchor DataFrame (default: None).
 
     Returns:
-    - adata_rna: Updated AnnData object with RNA embeddings.
-    - adata_atac: Updated AnnData object with ATAC embeddings.
     - anchor_df: DataFrame containing anchor information.
     """
-    # Step 1: Get integration features
-    adata_list = get_integration_features(
-        [adata_rna, adata_atac],
-        all_nfeatures=all_nfeatures,
-        single_nfeatures=single_nfeatures
-    )
-    
-    # Step 2: Initialize SeuratIntegration
-    integrator = SeuratIntegration()
-    
-    # Step 3: Find anchors
-    integrator.find_anchor(
-        adata_list,
-        k_local=None,
-        key_local="X_pca",
-        k_anchor=k_anchor,
-        key_anchor="X",
-        dim_red="cca",
-        max_cc_cells=50000,  
-        k_score=30,          
-        scale1=True,         
-        scale2=True,         
-        n_components=n_components,
-        k_filter=None,       
-        n_features=200,      
-        alignments=[[[0], [1]]]  
-    )
-    
-    # Step 4: Process anchor DataFrame
-    anchor_df = integrator.anchor[(0, 1)]
-    anchor_df['x1_ct'] = adata_rna.obs['cell_type'].values[anchor_df['x1'].values]
-    anchor_df['x2_ct'] = adata_atac.obs['pred'].values[anchor_df['x2'].values]
-    anchor_df['is_same'] = anchor_df['x1_ct'].values == anchor_df['x2_ct'].values
-    anchor_df = anchor_df[anchor_df['score'] > 0.2].reset_index(drop=True)
-    print(f"Number of anchor pairs: {anchor_df.shape[0]}")
 
-    if ct_filter:
-        anchor_df = anchor_df[anchor_df['is_same']]
-        print(f"Number of anchors pairs after cell type filtering: {anchor_df.shape[0]}")    
-    
-    rna_is_anchor_num = len(np.unique(anchor_df['x1'].values))
-    atac_is_anchor_num = len(np.unique(anchor_df['x2'].values))
-    print(f"Number of RNA anchors: {rna_is_anchor_num}; Number of ATAC anchors: {atac_is_anchor_num}")
-    
-    # Step 5: Update embeddings in AnnData objects
-    rna_embeddings = integrator.U
-    atac_embeddings = integrator.V
-    adata_rna.obsm['cca'] = rna_embeddings
-    adata_atac.obsm['cca'] = atac_embeddings
-    
+    if mode == 'v':
+        # Check if the number of cells in RNA and ATAC data are equal
+        if adata_rna.shape[0] != adata_atac.shape[0]:
+            raise ValueError(
+                f"The number of RNA cells ({adata_rna.shape[0]}) "
+                f"and ATAC cells ({adata_atac.shape[0]}) must be equal when mode='v'."
+            )
+        # Generate a simple anchor DataFrame
+        anchor_df = pd.DataFrame({
+            'x1': np.arange(adata_rna.shape[0]),
+            'x2': np.arange(adata_atac.shape[0]),
+            'x1_ct': adata_rna.obs['cell_type'].values[:min(adata_rna.shape[0], adata_atac.shape[0])]
+        })
+        print(f"Directly using {anchor_df.shape[0]} pairing cells as anchors")
+
+    else:
+        # Step 1: Get integration features
+        adata_list = get_integration_features(
+            [adata_rna, adata_atac],
+            all_nfeatures=all_nfeatures,
+            single_nfeatures=single_nfeatures
+        )
+        
+        # Step 2: Initialize SeuratIntegration
+        integrator = SeuratIntegration()
+        
+        # Step 3: Find anchors
+        integrator.find_anchor(
+            adata_list,
+            k_local=None,
+            key_local="X_pca",
+            k_anchor=k_anchor,
+            key_anchor="X",
+            dim_red="cca",
+            max_cc_cells=50000,  
+            k_score=30,          
+            scale1=True,         
+            scale2=True,         
+            n_components=n_components,
+            k_filter=None,       
+            n_features=200,      
+            alignments=[[[0], [1]]]  
+        )
+        
+        # Step 4: Process anchor DataFrame
+        anchor_df = integrator.anchor[(0, 1)]
+        anchor_df['x1_ct'] = adata_rna.obs['cell_type'].values[anchor_df['x1'].values]
+        anchor_df['x2_ct'] = adata_atac.obs['pred'].values[anchor_df['x2'].values]
+        anchor_df['is_same'] = anchor_df['x1_ct'].values == anchor_df['x2_ct'].values
+        anchor_df = anchor_df[anchor_df['score'] > 0.2].reset_index(drop=True)
+        print(f"Number of anchor pairs: {anchor_df.shape[0]}")
+
+        if ct_filter:
+            anchor_df = anchor_df[anchor_df['is_same']]
+            print(f"Number of anchors pairs after cell type filtering: {anchor_df.shape[0]}")    
+        
+        rna_is_anchor_num = len(np.unique(anchor_df['x1'].values))
+        atac_is_anchor_num = len(np.unique(anchor_df['x2'].values))
+        print(f"Number of RNA anchors: {rna_is_anchor_num}; Number of ATAC anchors: {atac_is_anchor_num}")
+        
+        # Step 5: Update embeddings in AnnData objects
+        rna_embeddings = integrator.U
+        atac_embeddings = integrator.V
+        adata_rna.obsm['cca'] = rna_embeddings
+        adata_atac.obsm['cca'] = atac_embeddings
+        
     return anchor_df
 
 
@@ -160,12 +177,12 @@ def train_model(rna_vae,
                 all_cells_loader, 
                 anchor_cells_loader, 
                 device = "cuda:0", 
-                num_epoches = 20000,
+                num_epoches = 10000,
                 lambda_rna_kl  = 1, 
                 lambda_atac_kl = 1, 
                 alpha_rna_rec  = 20, 
                 alpha_atac_rec = 20, 
-                lambda_contra  = 300, 
+                lambda_contra  = 200, 
                 temperature = 0.5, 
                 lr = 1e-3,
                 print_step = 10,
