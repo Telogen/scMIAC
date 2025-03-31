@@ -4,12 +4,10 @@ Single-Cell Multi-modality Integration via cell type filtered Anchors using Cont
 
 <img src="https://github.com/Telogen/scMIAC/blob/main/figures/Fig1.png" width="800">
 
-
-
-
 ## Installation
 
 - Create a conda environment
+
 ```
 conda create -n scMIAC python=3.8
 conda activate scMIAC
@@ -29,20 +27,29 @@ wget https://github.com/Telogen/scMIAC/archive/refs/heads/main.zip
 pip install main.zip
 ```
 
-
 ## Usage
+
+### Data preprocessing
+
+**Notes: Ensure:**
+
+- The **normalized expression matrix of all genes** is in `.raw` attribute.
+- The **normalized activity matrix of all genes** is in `.raw` attribute.
+- The **predicted cell type labels** are in `.obs['pred']` attribute.
+
+Example: https://github.com/Telogen/scMIAC/blob/main/tutorial/preprocess.ipynb
 
 ### scMIAC for diagonal integration
 
-https://github.com/Telogen/scMIAC/blob/main/tutorial/demo_diagonal.ipynb
+Example: https://github.com/Telogen/scMIAC/blob/main/tutorial/demo_diagonal.ipynb
 
 ### scMIAC for vertical integration
 
-https://github.com/Telogen/scMIAC/blob/main/tutorial/demo_vertical.ipynb
+Example: https://github.com/Telogen/scMIAC/blob/main/tutorial/demo_vertical.ipynb
 
 ### scMIAC for horizontal integration
 
-todo
+Refer to: https://github.com/Telogen/scMIAC/blob/main/tutorial/demo_diagonal.ipynb
 
 ## Contact
 

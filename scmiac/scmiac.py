@@ -5,7 +5,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
-from .integration_anchors import SeuratIntegration, get_integration_features
+from .integration_anchors import SeuratIntegration, get_cca_adata_list
 from .integration_dataset import MultiOmicDataset, AnchorCellsDataset
 from .integration_model import VAE
 from .integration_loss import NTXentLoss2, VAELoss
@@ -58,7 +58,7 @@ def find_anchors(
 
     else:
         # Step 1: Get integration features
-        adata_list = get_integration_features(
+        adata_list = get_cca_adata_list(
             [adata_rna, adata_atac],
             all_nfeatures=all_nfeatures,
             single_nfeatures=single_nfeatures
@@ -71,7 +71,7 @@ def find_anchors(
         integrator.find_anchor(
             adata_list,
             k_local=None,
-            key_local="X_pca",
+            key_local="X_pca", # useless because k_local=None 
             k_anchor=k_anchor,
             key_anchor="X",
             dim_red="cca",
@@ -89,7 +89,7 @@ def find_anchors(
         anchor_df = integrator.anchor[(0, 1)]
         anchor_df['x1_ct'] = adata_rna.obs['cell_type'].values[anchor_df['x1'].values]
         anchor_df['x2_ct'] = adata_atac.obs['pred'].values[anchor_df['x2'].values]
-        anchor_df['is_same'] = anchor_df['x1_ct'].values == anchor_df['x2_ct'].values
+        anchor_df['is_same'] = anchor_df['x1_ct'].astype(str) == anchor_df['x2_ct'].astype(str)
         anchor_df = anchor_df[anchor_df['score'] > 0.2].reset_index(drop=True)
         print(f"Number of anchor pairs: {anchor_df.shape[0]}")
 
@@ -177,7 +177,7 @@ def train_model(rna_vae,
                 all_cells_loader, 
                 anchor_cells_loader, 
                 device = "cuda:0", 
-                num_epoches = 10000,
+                num_epoches = 2000,
                 lambda_rna_kl  = 1, 
                 lambda_atac_kl = 1, 
                 alpha_rna_rec  = 20, 

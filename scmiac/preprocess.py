@@ -11,30 +11,30 @@ import torch
 
 
 
-def preprocessing_atac(adata_atac, binary=True, n_top_genes=None):
+def preprocessing_atac(adata_atac, binary=True, n_top_peaks=None):
     """
     Preprocess single-cell ATAC-seq data.
 
     Parameters:
         adata (AnnData): AnnData object containing ATAC-seq data.
         binary (bool): Whether to binarize the expression matrix (set values greater than 1 to 1), default is True.
-        n_top_genes (int): Number of highly variable genes to retain, default is 30,000.
+        n_top_peaks (int): Number of highly variable genes to retain, default is 30,000.
 
     Returns:
         AnnData: A new AnnData object containing only the specified number of highly variable genes.
 
     Example:
-        adata_processed = preprocessing_atac(adata, binary=True, n_top_genes=30000)
+        adata_processed = preprocessing_atac(adata, binary=True, n_top_peaks=30000)
     """
     print('Raw dataset shape: {}'.format(adata_atac.shape))
     if not issparse(adata_atac.X):
         adata_atac.X = scipy.sparse.csr_matrix(adata_atac.X)
     if binary:
         adata_atac.X[adata_atac.X > 1] = 1
-    if n_top_genes is not None:
+    if n_top_peaks is not None:
         # inplace=False: Returns a new AnnData object without modifying the original adata
         # subset=True: Retains only the specified number of highly variable genes
-        adata_atac = sc.pp.highly_variable_genes(adata_atac, n_top_genes=n_top_genes, subset=True, inplace=False)
+        adata_atac = sc.pp.highly_variable_genes(adata_atac, n_top_genes=n_top_peaks, subset=True, inplace=False)
         print('Processed dataset shape: {}'.format(adata_atac.shape))
     return adata_atac
 

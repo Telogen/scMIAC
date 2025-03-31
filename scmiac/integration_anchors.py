@@ -22,9 +22,8 @@ from sklearn.utils.extmath import safe_sparse_dot
 
 
 
-
-# get_integration_features
-def get_integration_features(
+# get_cca_adata_list
+def get_cca_adata_list(
     adatas,
     all_nfeatures=3000,
     single_nfeatures=3000
@@ -45,7 +44,7 @@ def get_integration_features(
     adata_raw_list = []
     for idx, adata in enumerate(adatas, start=1):
         adata_raw = adata.raw.to_adata()
-        adata_raw.raw = adata.raw.to_adata()
+        adata_raw.raw = adata_raw
         adata_raw_list.append(adata_raw)
     
     # 2. Find common genes across all datasets
@@ -61,26 +60,16 @@ def get_integration_features(
     # 4. Perform highly variable gene selection and ranking for each dataset
     for idx, adata_raw in enumerate(adata_raw_list, start=1):
         dataset_name = f'adata{idx}_rank'
-
-        # 4a. Run highly variable gene selection
         sc.pp.highly_variable_genes(
             adata_raw,
             flavor='seurat',
             n_top_genes=single_nfeatures,
             inplace=True
         )
-        
-        # 4b. Filter for common genes and ensure they are highly variable
         hvgs = adata_raw.var.loc[common_genes]
-        
-        # 4c. Sort by normalized dispersion (descending order)
         hvgs_sorted = hvgs.sort_values(by='dispersions_norm', ascending=False)
-        
-        # 4d. Assign ranks (1 being the highest dispersion)
         hvgs_sorted = hvgs_sorted.reset_index()
         hvgs_sorted['rank'] = np.arange(1, len(hvgs_sorted) + 1)
-        
-        # 4e. Add the ranks to gene_rank_df
         gene_rank_df[dataset_name] = hvgs_sorted.set_index('index')['rank']
     
     # 5. Compute the rank sum for each gene
@@ -99,8 +88,6 @@ def get_integration_features(
         adata_subs.append(adata_sub)
     
     return adata_subs
-
-
 
 
 
@@ -803,22 +790,22 @@ class SeuratIntegration:
 
     def _pairwise_find_anchor(
         self,
-        i,  # 数据集的索引，表示要进行配对的数据集
-        i_sel,  # 可选的细胞选择索引
-        j,  # 数据集的索引，表示要进行配对的数据集
-        j_sel,  # 可选的细胞选择索引
-        dim_red,    # 降维方法
-        key_anchor, # 用于锚点计算的数据键
+        i,  # Index of the dataset to be paired
+        i_sel,  # Optional cell selection indices
+        j,  # Index of the dataset to be paired
+        j_sel,  # Optional cell selection indices
+        dim_red,    # Dimensionality reduction method
+        key_anchor, # Data key used for anchor calculation
         svd_algorithm,
         scale1,
         scale2,
-        k_anchor,   # 寻找锚点时使用的k近邻数量
-        k_local,    # 局部评分时使用的k近邻数量
-        k_score,    # 评分锚点时使用的k近邻数量
-        ncc,    # 降维后的维度数
-        max_cc_cell,    # CCA最大处理的细胞数
-        k_filter,   # 用于锚点过滤的k近邻数量
-        n_features, # 用于锚点过滤的高维特征的数量
+        k_anchor,   # Number of k-nearest neighbors used for finding anchors
+        k_local,    # Number of k-nearest neighbors used for local scoring
+        k_score,    # Number of k-nearest neighbors used for scoring anchors
+        ncc,    # Number of dimensions after reduction
+        max_cc_cell,    # Maximum number of cells processed by CCA
+        k_filter,   # Number of k-nearest neighbors used for anchor filtering
+        n_features, # Number of high-dimensional features used for anchor filtering
         chunk_size,
         random_state,
         signorm,
@@ -933,7 +920,6 @@ class SeuratIntegration:
                     )[:, ::-1]
                     
         elif dim_red in ("rpca", "rlsi"):
-            from .cca import LSI, SVD, downsample
 
             adata1, adata2 = adata1.X, adata2.X
             k = max(i for i in [k_anchor, k_local, k_score, 50] if i is not None)
